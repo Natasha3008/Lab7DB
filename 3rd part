@@ -1,0 +1,62 @@
+   from neo4j import GraphDatabase
+
+   class GardenDatabase:
+       def __init__(self, uri, user, password):  
+           #создаем подключение к базе данных
+           self.driver = GraphDatabase.driver(uri, auth=(user, password))
+
+       def close(self):
+           self.driver.close()
+
+       def create_and_fill_collection(self):
+           with self.driver.session() as session:
+               session.run("CREATE (p1:Plant {name: 'Вишня', price: 3000, supplier: 'Питомник1', quantity: 10})")
+               session.run("CREATE (p2:Plant {name: 'Смородина', price: 2000, supplier: 'Питомник2', quantity: 15})")
+               session.run("CREATE (p3:Plant {name: 'Крыжовник', price: 2500, supplier: 'Питомник1', quantity: 8})")
+               print("Коллекция создана и заполнена!")
+
+       def display_collection(self):
+           with self.driver.session() as session:
+               result = session.run("MATCH (p:Plant) RETURN p")
+               for record in result:
+                   print(record["p"])
+
+       def update_plant(self, old_name, new_price):
+           with self.driver.session() as session:
+               session.run("MATCH (p:Plant {name: $name}) SET p.price = $new_price", 
+                           name=old_name, new_price=new_price)
+               print(f"Обновлена цена для {old_name}.")
+
+       def delete_plant(self, name):
+           with self.driver.session() as session:
+               session.run("MATCH (p:Plant {name: $name}) DELETE p", name=name)
+               print(f"Удалено растение: {name}.")
+
+       def clear_collection(self):
+           with self.driver.session() as session:
+               session.run("MATCH (p:Plant) DELETE p")
+               print("Коллекция очищена!")
+
+   if __name__ == "__main__":  
+       db = GardenDatabase("bolt://localhost:7687", "neo4j", "neo4j")  #
+       db.create_and_fill_collection()  #создание и заполнение коллекции
+       print("\nСодержимое коллекции:")
+       db.display_collection()  #вывод содержимого
+
+       #обновление цены для вишни
+       db.update_plant("Вишня", 3500)
+       print("\nПосле обновления цены:")
+       db.display_collection()  #вывод содержимого после обновления
+
+       #удаление крыжовника
+       db.delete_plant("Крыжовник")
+       print("\nПосле удаления крыжовника:")
+       db.display_collection()  #вывод содержимого после удаления
+
+       #очистка коллекции
+       db.clear_collection()
+       print("\nПосле очистки:")
+       db.display_collection()  #вывод содержимого после очистки
+
+       db.close()
+   
